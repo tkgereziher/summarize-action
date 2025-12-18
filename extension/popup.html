@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Summarize & Action</title>
+    <style>
+      body { font-family: Arial, sans-serif; width: 320px; padding: 12px; }
+      textarea { width: 100%; height: 120px; }
+      button { margin-top: 8px; width: 100%; }
+      .result { margin-top: 12px; background:#f7f7f7; padding:8px; border-radius:4px; }
+    </style>
+  </head>
+  <body>
+    <h3>Summarize & Action</h3>
+    <textarea id="input" placeholder="Paste or select text on the page and open this popup"></textarea>
+    <button id="summarize">Summarize</button>
+    <div id="loading" style="display:none">Working…</div>
+    <div id="output" class="result" style="display:none"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
