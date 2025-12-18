@@ -1,9 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { OpenAI } = require('openai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Simple root page so GET / is friendly
 app.get('/', (req, res) => {
@@ -12,7 +18,6 @@ app.get('/', (req, res) => {
     <body>
       <h1>Summarize & Action — Server</h1>
       <p>Use <code>POST /summarize</code> with JSON: <code>{"text":"your text here"}</code></p>
-      <p>Example: <code>curl -X POST -H "Content-Type: application/json" -d '{"text":"Hello"}' http://localhost:3000/summarize</code></p>
     </body>
   </html>`);
 });
@@ -20,28 +25,44 @@ app.get('/', (req, res) => {
 app.post('/summarize', async (req, res) => {
   const text = req.body.text || '';
   if (!text) return res.status(400).json({ error: 'No text provided' });
-
-  // TODO: Replace this stub with a real LLM call (OpenAI, Anthropic, etc.)
-  const stubResponse = {
-    tl_dr: text.split('\n').slice(0, 2).join(' ').slice(0, 300) + '…',
-    bullets: [
-      'Key point 1 (stub)',
-      'Key point 2 (stub)',
-      'Key point 3 (stub)'
-    ],
-    actions: [
-      'Create a short GitHub issue describing the problem.',
-      'Save this summary to your notes.'
-    ]
-  };
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('Missing OPENAI_API_KEY');
+    return res.status(500).json({ error: 'Missing OPENAI_API_KEY on server' });
+  }
 
   try {
-    // Simulate async LLM latency
-    await new Promise(r => setTimeout(r, 400));
-    res.json(stubResponse);
+    console.log('Received text length:', text.length);
+    const prompt = `You are a helpful assistant. Summarize the following text.
+    Return a JSON object with this key structure:
+    {
+      "tl_dr": "A one-sentence summary",
+      "bullets": ["Array of 3-5 key points"],
+      "actions": ["Array of suggested actions if applicable"]
+    }
+    
+    Text to summarize:
+    ${text.slice(0, 10000)} (truncated if too long)
+    `;
+
+    console.log('Calling OpenAI...');
+    const completion = await openai.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "gpt-3.5-turbo",
+      response_format: { type: "json_object" }, // json_object requires instruction in prompt
+    });
+
+    const content = completion.choices[0].message.content;
+    console.log('OpenAI Response:', content);
+    
+    const json = JSON.parse(content);
+    res.json(json);
   } catch (err) {
     console.error('Error in /summarize:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    // Print full error details if it's an OpenAI error
+    if (err.response) {
+      console.error(err.response.status, err.response.data);
+    }
+    res.status(500).json({ error: 'Error generating summary: ' + err.message });
   }
 });
 
