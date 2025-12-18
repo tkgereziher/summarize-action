@@ -52,3 +52,18 @@ async function summarize() {
 document.getElementById('summarize').addEventListener('click', summarize);
 
 pasteSelection();
+
+(async function showFirstRun() {
+  const { seenOnboard } = await chrome.storage.local.get(['seenOnboard']);
+  if (!seenOnboard) {
+    // create a small banner at the top of popup
+    const banner = document.createElement('div');
+    banner.style = 'background:#e8f0fe;padding:8px;border-radius:6px;margin-bottom:8px;font-size:13px';
+    banner.innerHTML = '<strong>Welcome!</strong> Select text on a page and click "Summarize". <button id="dismissOnboard" style="margin-left:8px">Got it</button>';
+    document.body.insertBefore(banner, document.body.firstChild);
+    document.getElementById('dismissOnboard').addEventListener('click', async () => {
+      banner.remove();
+      await chrome.storage.local.set({ seenOnboard: true });
+    });
+  }
+})();

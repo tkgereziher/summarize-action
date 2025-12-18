@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Welcome — Summarize & Action</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 760px; margin: 36px auto; padding: 0 16px; }
+      h1 { margin-bottom: 0.25rem; }
+      .card { background: #fff; border-radius: 8px; padding: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+      button { margin-top: 12px; padding: 10px 14px; border-radius: 6px; border: none; background:#1a73e8; color: #fff; cursor:pointer; }
+      .hint { margin-top:12px; color:#555; font-size:0.95rem; }
+      a.link { color: #1a73e8; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Welcome to Summarize & Action</h1>
+      <p>Thanks for installing! A quick guide to get started:</p>
+      <ol>
+        <li>Pin the extension to your browser toolbar so it's always visible.</li>
+        <li>Select text on any webpage, click the extension icon (top-right), and it will summarize the selection and suggest actions.</li>
+        <li>Use the context menu: right-click selected text and choose "Summarize selection..."</li>
+      </ol>
+
+      <button id="openPopup">Open Extension Popup</button>
+
+      <p class="hint">
+        We send selected text to the local server / your configured LLM endpoint. See the <a class="link" href="#" id="openReadme">README</a> for privacy details.
+      </p>
+    </div>
+
+    <script>
+      document.getElementById('openPopup').addEventListener('click', () => {
+        // Try to open the popup as a new tab (popup can't be opened programmatically)
+        window.location.href = chrome.runtime.getURL('popup.html');
+      });
+      document.getElementById('openReadme').addEventListener('click', () => {
+        window.location.href = chrome.runtime.getURL('README.html');
+      });
+    </script>
+  </body>
+</html>
