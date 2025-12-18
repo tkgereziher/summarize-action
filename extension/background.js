@@ -22,15 +22,40 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-// Handle context menu click (sends message to content/popup to populate selection)
+// Handle context menu click
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'summarize-selection') {
-    // Open popup by opening a new tab with the extension popup? (Not allowed)
-    // Instead, send a message to the content script to copy the selection or
-    // open a new tab with a lightweight in-extension page that runs summarize.
-    // Here we open the popup-like page in a tab:
-    chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
-    // You can also store the selected text and the popup will pick it up from the page
-    // via content script or via messaging. For now, opening popup page is simplest.
+    if (tab.id) {
+      // Send message to content script to show modal
+      chrome.tabs.sendMessage(tab.id, { 
+        action: 'SHOW_MODAL', 
+        text: info.selectionText 
+      }).catch(err => {
+        // If content script is not ready (e.g. restricted page or not loaded), 
+        // we might fail. In a robust app, we'd inject programmatically here as fallback.
+        console.warn('Could not send message to tab:', err);
+      });
+    }
+  }
+});
+
+// Handle messages from content script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'FETCH_SUMMARY') {
+    // Perform fetch here to avoid CORS in content script
+    (async () => {
+      try {
+        const res = await fetch('http://localhost:3000/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: request.text })
+        });
+        const data = await res.json();
+        sendResponse({ data });
+      } catch (err) {
+        sendResponse({ error: err.message });
+      }
+    })();
+    return true; // Keep channel open for async response
   }
 });

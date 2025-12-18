@@ -3,9 +3,21 @@ const outEl = document.getElementById('output');
 const loadEl = document.getElementById('loading');
 
 async function pasteSelection() {
-  // Try to get the page selection via scripting
+  // 1. Check if we have pending text from the background script
+  const { pendingText } = await chrome.storage.local.get('pendingText');
+  if (pendingText) {
+    inputEl.value = pendingText;
+    // Clear it so it doesn't persist forever
+    await chrome.storage.local.remove('pendingText');
+    return;
+  }
+
+  // 2. Fallback: Try to get the page selection via scripting (mostly for dev/debug or if opened manually)
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // If the active tab is this popup itself (common if opened in new tab), executeScript will fail or get nothing meaningful
+    if (tab.url.startsWith('chrome-extension://')) return;
+
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => window.getSelection().toString()
@@ -31,9 +43,46 @@ async function summarize() {
       body: JSON.stringify({ text })
     });
     const data = await res.json();
-    outEl.innerHTML = `<strong>TL;DR</strong><div>${data.tl_dr}</div>
-      <strong>Key points</strong><ul>${(data.bullets||[]).map(b=>`<li>${b}</li>`).join('')}</ul>
-      <strong>Actions</strong><ol>${(data.actions||[]).map(a=>`<li>${a}</li>`).join('')}</ol>`;
+    
+    // Clear previous content
+    outEl.innerHTML = '';
+
+    // TL;DR
+    const tldrHeader = document.createElement('strong');
+    tldrHeader.textContent = 'TL;DR';
+    const tldrDiv = document.createElement('div');
+    tldrDiv.textContent = data.tl_dr;
+    outEl.appendChild(tldrHeader);
+    outEl.appendChild(tldrDiv);
+
+    // Key points
+    if (data.bullets && data.bullets.length) {
+      const bulletHeader = document.createElement('strong');
+      bulletHeader.textContent = 'Key points';
+      const bulletList = document.createElement('ul');
+      data.bullets.forEach(b => {
+        const li = document.createElement('li');
+        li.textContent = b;
+        bulletList.appendChild(li);
+      });
+      outEl.appendChild(bulletHeader);
+      outEl.appendChild(bulletList);
+    }
+
+    // Actions
+    if (data.actions && data.actions.length) {
+      const actionHeader = document.createElement('strong');
+      actionHeader.textContent = 'Actions';
+      const actionList = document.createElement('ol');
+      data.actions.forEach(a => {
+        const li = document.createElement('li');
+        li.textContent = a;
+        actionList.appendChild(li);
+      });
+      outEl.appendChild(actionHeader);
+      outEl.appendChild(actionList);
+    }
+
     outEl.style.display = 'block';
 
     // save to local history
