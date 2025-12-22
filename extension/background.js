@@ -3,12 +3,8 @@
 chrome.runtime.onInstalled.addListener((details) => {
   try {
     if (details.reason === 'install') {
-      // Open a welcome page on fresh install
+      // Open a welcome page ONLY on fresh install
       chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
-    } else if (details.reason === 'update') {
-      // Optionally open changelog on update for major versions:
-      // const previous = details.previousVersion || 'unknown';
-      // chrome.tabs.create({ url: chrome.runtime.getURL('changelog.html') });
     }
 
     // Create a handy context menu to start summarizing if desired
