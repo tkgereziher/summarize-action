@@ -1,14 +1,16 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ 
+  model: 'gemini-1.5-flash-latest',
+  generationConfig: { responseMimeType: 'application/json' }
 });
 
 // Simple root page so GET / is friendly
@@ -25,9 +27,9 @@ app.get('/', (req, res) => {
 app.post('/summarize', async (req, res) => {
   const text = req.body.text || '';
   if (!text) return res.status(400).json({ error: 'No text provided' });
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('Missing OPENAI_API_KEY');
-    return res.status(500).json({ error: 'Missing OPENAI_API_KEY on server' });
+  if (!process.env.GEMINI_API_KEY) {
+    console.error('Missing GEMINI_API_KEY');
+    return res.status(500).json({ error: 'Missing GEMINI_API_KEY on server' });
   }
 
   try {
@@ -41,27 +43,20 @@ app.post('/summarize', async (req, res) => {
     }
     
     Text to summarize:
-    ${text.slice(0, 10000)} (truncated if too long)
+    ${text.slice(0, 30000)} (truncated if too long)
     `;
 
-    console.log('Calling OpenAI...');
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "gpt-3.5-turbo",
-      response_format: { type: "json_object" }, // json_object requires instruction in prompt
-    });
-
-    const content = completion.choices[0].message.content;
-    console.log('OpenAI Response:', content);
+    console.log('Calling Gemini...');
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const content = response.text();
+    
+    console.log('Gemini Response received successfully');
     
     const json = JSON.parse(content);
     res.json(json);
   } catch (err) {
     console.error('Error in /summarize:', err);
-    // Print full error details if it's an OpenAI error
-    if (err.response) {
-      console.error(err.response.status, err.response.data);
-    }
     res.status(500).json({ error: 'Error generating summary: ' + err.message });
   }
 });
