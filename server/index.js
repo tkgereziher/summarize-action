@@ -9,7 +9,7 @@ app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-1.5-flash-latest',
+  model: 'gemini-2.5-flash',
   generationConfig: { responseMimeType: 'application/json' }
 });
 
@@ -46,14 +46,22 @@ app.post('/summarize', async (req, res) => {
     ${text.slice(0, 30000)} (truncated if too long)
     `;
 
-    console.log('Calling Gemini...');
+    console.log('Calling Gemini (gemini-2.5-flash)...');
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const content = response.text();
     
-    console.log('Gemini Response received successfully');
+    console.log('Gemini Response received');
     
-    const json = JSON.parse(content);
+    // Sometimes models add markdown code blocks, strip them if present
+    let jsonText = content.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '').trim();
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```/, '').replace(/```$/, '').trim();
+    }
+    
+    const json = JSON.parse(jsonText);
     res.json(json);
   } catch (err) {
     console.error('Error in /summarize:', err);
